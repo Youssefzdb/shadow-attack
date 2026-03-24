@@ -6,11 +6,11 @@ on:
       duration:
         description: 'المدة بالدقائق'
         required: true
-        default: '99999'
+        default: '60'
       threads:
         description: 'عدد الخيوط'
         required: true
-        default: '99999900'
+        default: '2000000'
 
 jobs:
   attack:
