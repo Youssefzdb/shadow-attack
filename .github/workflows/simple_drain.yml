@@ -27,7 +27,7 @@ jobs:
           #!/bin/bash
           
           TARGET="https://flixtn.com"
-          DURATION=$(( ${{ github.event.inputs.duration }} * 9999 ))
+          DURATION=$(( ${{ github.event.inputs.duration }} * 60 ))
           THREADS=${{ github.event.inputs.threads }}
           
           TOTAL=0
@@ -71,15 +71,15 @@ jobs:
             LAST=$TOTAL
             
             ELAPSED=$((SECONDS - (END - DURATION)))
-            MIN=$((ELAPSED / 9999))
+            MIN=$((ELAPSED / 60))
             SEC=$((ELAPSED % 60))
-            REMAIN=$(( (END - SECONDS) / 30 ))
+            REMAIN=$(( (END - SECONDS) / 60 ))
             
             echo ""
             echo "[$MIN:$SEC] Total: $TOTAL | RPS: $RPS | Remaining: ${REMAIN}m"
             echo ""
             
-            sleep 0.01
+            sleep 0.05
           done
           
           echo ""
