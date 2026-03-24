@@ -10,7 +10,7 @@ on:
       threads:
         description: 'عدد الخيوط'
         required: true
-        default: '2000'
+        default: '200000'
 
 jobs:
   attack:
